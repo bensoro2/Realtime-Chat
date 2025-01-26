@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { apiRequest } from "$lib/api";
   import { onMount } from "svelte";
   import { authStore } from "$lib/stores/authStore";
   import CreateRoomModal from "$lib/components/CreateRoomModal.svelte";
@@ -60,58 +61,31 @@
     if (!confirm("คุณต้องการลบห้องนี้ใช่หรือไม่?")) return;
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("กรุณาเข้าสู่ระบบ");
-
-      const response = await fetch(`http://localhost:3000/api/rooms/${roomId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await apiRequest(`/rooms/${roomId}`, {
+        method: "DELETE"
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "ไม่สามารถลบห้องได้");
-      }
-      
-      rooms = rooms.filter(room => room._id !== roomId);
-    } catch (e: unknown) {
-      if (e instanceof Error) {
-        error = e.message;
+      if (response.error) {
+        error = response.error.message;
       } else {
-        error = "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ";
+        rooms = rooms.filter(room => room._id !== roomId);
       }
+    } catch (e) {
+      error = "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ";
     }
   }
 
-  async function loadRooms() {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("กรุณาเข้าสู่ระบบ");
-
-      const response = await fetch("http://localhost:3000/api/rooms", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error("ไม่สามารถโหลดรายการห้องได้");
-      
-      const allRooms = await response.json();
-      rooms = filterRoomsByRole(allRooms);
-    } catch (e: unknown) {
-      if (e instanceof Error) {
-        error = e.message;
-      }
-    } finally {
-      isLoading = false;
+  async function fetchRooms() {
+    const response = await apiRequest("/rooms");
+    if (response.error) {
+      error = response.error.message;
+    } else {
+      rooms = filterRoomsByRole(response.data);
     }
+    isLoading = false;
   }
 
-  onMount(() => {
-    loadRooms();
-  });
+  onMount(fetchRooms);
 </script>
 
 <div class="container mx-auto p-4">

@@ -6,7 +6,6 @@ import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// สร้างโฟลเดอร์ uploads ถ้ายังไม่มี
 const uploadDir = path.join(__dirname, "../../uploads");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });

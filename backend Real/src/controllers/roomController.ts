@@ -1,10 +1,11 @@
+import * as express from "express";
 import { Response } from "express";
 import { RoomModel } from "../models/Room";
 import { AuthRequest } from "../middleware/auth";
 import { MessageModel } from "../models/messageModel";
 
 export const roomController = {
-  createRoom: async (req: AuthRequest, res: Response) => {
+  createRoom: async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { name } = req.body;
       let imageUrl = undefined;
@@ -25,17 +26,20 @@ export const roomController = {
         .populate("members", "username email");
 
       res.status(201).json(populatedRoom);
+      return;
     } catch (error) {
       console.error("Create room error:", error);
       res.status(400).json({ error: "สร้างห้องไม่สำเร็จ" });
+      return;
     }
   },
 
-  joinRoom: async (req: AuthRequest, res: Response) => {
+  joinRoom: async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const room = await RoomModel.findById(req.params.roomId);
       if (!room) {
-        return res.status(404).json({ error: "ไม่พบห้อง" });
+        res.status(404).json({ error: "ไม่พบห้อง" });
+        return;
       }
 
       const memberIds = room.members.map((member) => member.toString());
@@ -50,25 +54,29 @@ export const roomController = {
         .populate("members", "username email");
 
       res.json(populatedRoom);
+      return;
     } catch (error) {
       console.error("Join room error:", error);
       res.status(400).json({ error: "เข้าร่วมห้องไม่สำเร็จ" });
+      return;
     }
   },
 
-  updateRoom: async (req: AuthRequest, res: Response) => {
+  updateRoom: async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const room = await RoomModel.findById(req.params.roomId);
 
       if (!room) {
-        return res.status(404).json({ error: "ไม่พบห้อง" });
+        res.status(404).json({ error: "ไม่พบห้อง" });
+        return;
       }
 
       if (
         req.user.role !== "admin" &&
         room.owner.toString() !== req.user._id.toString()
       ) {
-        return res.status(403).json({ error: "ไม่มีสิทธิ์แก้ไขห้องนี้" });
+        res.status(403).json({ error: "ไม่มีสิทธิ์แก้ไขห้องนี้" });
+        return;
       }
 
       room.name = req.body.name;
@@ -84,19 +92,21 @@ export const roomController = {
     }
   },
 
-  deleteRoom: async (req: AuthRequest, res: Response) => {
+  deleteRoom: async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const room = await RoomModel.findById(req.params.roomId);
 
       if (!room) {
-        return res.status(404).json({ error: "ไม่พบห้อง" });
+        res.status(404).json({ error: "ไม่พบห้อง" });
+        return;
       }
 
       if (
         req.user.role !== "admin" &&
         room.owner.toString() !== req.user._id.toString()
       ) {
-        return res.status(403).json({ error: "ไม่มีสิทธิ์ลบห้องนี้" });
+        res.status(403).json({ error: "ไม่มีสิทธิ์ลบห้องนี้" });
+        return;
       }
 
       await RoomModel.findByIdAndDelete(req.params.roomId);
@@ -106,11 +116,12 @@ export const roomController = {
     }
   },
 
-  uploadImage: async (req: AuthRequest, res: Response) => {
+  uploadImage: async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const room = await RoomModel.findById(req.params.roomId);
       if (!room) {
-        return res.status(404).json({ error: "ไม่พบห้อง" });
+        res.status(404).json({ error: "ไม่พบห้อง" });
+        return;
       }
 
       if (req.file) {
@@ -124,7 +135,7 @@ export const roomController = {
     }
   },
 
-  getAllRooms: async (req: AuthRequest, res: Response) => {
+  getAllRooms: async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const rooms = await RoomModel.find()
         .populate("owner", "username email")
@@ -138,24 +149,24 @@ export const roomController = {
     }
   },
 
-  // เพิ่มฟังก์ชันใหม่
-  getRoom: async (req: AuthRequest, res: Response) => {
+  getRoom: async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const room = await RoomModel.findById(req.params.roomId)
         .populate("owner", "username email")
         .populate("members", "username email");
 
       if (!room) {
-        return res.status(404).json({ error: "ไม่พบห้อง" });
+        res.status(404).json({ error: "ไม่พบห้อง" });
+        return;
       }
 
-      // ตรวจสอบว่าผู้ใช้เป็นสมาชิกของห้องหรือไม่
       const isMember = room.members.some(
         (member: any) => member._id.toString() === req.user._id.toString()
       );
 
       if (!isMember) {
-        return res.status(403).json({ error: "คุณไม่ใช่สมาชิกของห้องนี้" });
+        res.status(403).json({ error: "คุณไม่ใช่สมาชิกของห้องนี้" });
+        return;
       }
 
       res.json(room);
@@ -165,7 +176,7 @@ export const roomController = {
     }
   },
 
-  getMessages: async (req: AuthRequest, res: Response) => {
+  getMessages: async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const messages = await MessageModel.find({
         roomId: req.params.roomId,
@@ -173,6 +184,27 @@ export const roomController = {
       res.json(messages);
     } catch (error) {
       res.status(400).json({ error: "ไม่สามารถดึงข้อความได้" });
+    }
+  },
+
+  getPublicRooms: async (
+    req: express.Request,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const rooms = await RoomModel.find()
+        .populate("owner", "username email")
+        .populate("members", "username email")
+        .select("-__v")
+        .sort({ createdAt: -1 })
+        .limit(10);
+
+      res.json(rooms);
+      return;
+    } catch (error) {
+      console.error("Get public rooms error:", error);
+      res.status(400).json({ error: "ไม่สามารถดึงข้อมูลห้องสาธารณะได้" });
+      return;
     }
   },
 };
