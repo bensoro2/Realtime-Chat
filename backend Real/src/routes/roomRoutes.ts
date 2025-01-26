@@ -1,43 +1,23 @@
-import * as express from "express";
+import express from "express";
 import { roomController } from "../controllers/roomController";
 import { auth } from "../middleware/auth";
 import { upload } from "../middleware/upload";
-import { AuthRequest } from "../middleware/auth";
-import { Response } from "express";
 
 const router = express.Router();
 
-router.get("/", roomController.getAllRooms);
-router.post(
-  "/",
-  auth,
-  upload.single("image"),
-  async (req: AuthRequest, res: Response) => {
-    await roomController.createRoom(req, res);
-  }
-);
-router.post("/:roomId/join", auth, async (req: AuthRequest, res: Response) => {
-  await roomController.joinRoom(req, res);
-});
-router.put("/:roomId", auth, async (req: AuthRequest, res: Response) => {
-  await roomController.updateRoom(req, res);
-});
-router.delete("/:roomId", auth, async (req: AuthRequest, res: Response) => {
-  await roomController.deleteRoom(req, res);
-});
+router.get("/public", roomController.getPublicRooms);
+router.get("/", auth, roomController.getAllRooms);
+router.post("/", auth, upload.single("image"), roomController.createRoom);
+router.post("/:roomId/join", auth, roomController.joinRoom);
+router.put("/:roomId", auth, roomController.updateRoom);
+router.delete("/:roomId", auth, roomController.deleteRoom);
 router.post(
   "/:roomId/image",
   auth,
   upload.single("image"),
-  async (req: AuthRequest, res: Response) => {
-    await roomController.uploadImage(req, res);
-  }
+  roomController.uploadImage
 );
-
-router.get("/:roomId", auth, async (req: AuthRequest, res: Response) => {
-  await roomController.getRoom(req, res);
-});
-
+router.get("/:roomId", auth, roomController.getRoom);
 router.get("/:roomId/messages", auth, roomController.getMessages);
 
 export default router;

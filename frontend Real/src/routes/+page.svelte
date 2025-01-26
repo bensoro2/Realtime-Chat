@@ -32,13 +32,20 @@
   let isLoading = true;
   let error: string | null = null;
 
-  // เช็คว่าเป็นสมาชิกในห้องแล้วหรือไม่
+  // แก้ไขฟังก์ชัน isMember ให้รองรับกรณีไม่ได้ login
   function isMember(room: Room) {
-    const userId = get(authStore).user?._id;
-    return room.members.some(member => member._id === userId);
+    const authState = get(authStore);
+    if (!authState.isAuthenticated) return false;
+    return room.members.some(member => member._id === authState.user?._id);
   }
 
   async function joinRoom(roomId: string) {
+    // เช็คว่า login แล้วหรือยัง
+    if (!get(authStore).isAuthenticated) {
+      goto('/login');
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -82,42 +89,27 @@
     }
   }
 
-  onMount(() => {
-    const unsubscribe = authStore.subscribe(async (auth) => {
-      if (!auth.isLoading) {
-        if (!auth.isAuthenticated) {
-          goto('/login');
-          unsubscribe();
-          return;
-        } else {
-          try {
-            const token = localStorage.getItem("token");
-            const response = await fetch("http://localhost:3000/api/rooms", {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
-            });
-            
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error || "ไม่สามารถโหลดรายการห้องได้");
-            }
-            
-            rooms = await response.json();
-          } catch (e: unknown) {
-            if (e instanceof Error) {
-              error = e.message;
-            } else {
-              error = "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ";
-            }
-            console.error("Error fetching rooms:", e);
-          } finally {
-            isLoading = false;
-          }
-        }
-        unsubscribe(); // หยุดการ subscribe เมื่อทำงานเสร็จ
+  onMount(async () => {
+    try {
+      // แก้ไขการเรียก API ให้ไม่ต้องใช้ token
+      const response = await fetch("http://localhost:3000/api/rooms/public");
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "ไม่สามารถโหลดรายการห้องได้");
       }
-    });
+      
+      rooms = await response.json();
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        error = e.message;
+      } else {
+        error = "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ";
+      }
+      console.error("Error fetching rooms:", e);
+    } finally {
+      isLoading = false;
+    }
   });
 </script>
 
@@ -165,7 +157,9 @@
                 class="btn btn-primary"
                 on:click={() => joinRoom(room._id)}
               >
-                {#if isMember(room)}
+                {#if !$authStore.isAuthenticated}
+                  เข้าสู่ระบบเพื่อเข้าร่วม
+                {:else if isMember(room)}
                   เข้าห้องแชท
                 {:else}
                   เข้าร่วมแชท

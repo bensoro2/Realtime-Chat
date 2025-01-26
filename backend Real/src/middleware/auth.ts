@@ -8,7 +8,11 @@ export interface AuthRequest extends Request {
   user?: any;
 }
 
-export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const auth = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const token = req.header("Authorization")?.replace("Bearer ", "");
     if (!token) {
@@ -28,7 +32,11 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction) 
   }
 };
 
-export const adminAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const adminAuth = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     if (req.user.role !== "admin") {
       throw new Error();
@@ -37,4 +45,4 @@ export const adminAuth = async (req: AuthRequest, res: Response, next: NextFunct
   } catch (error) {
     res.status(403).json({ error: "ไม่มีสิทธิ์เข้าถึง" });
   }
-}; 
+};

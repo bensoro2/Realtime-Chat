@@ -7,7 +7,7 @@ import userRoutes from "./src/routes/userRoutes";
 import roomRoutes from "./src/routes/roomRoutes";
 import * as path from "path";
 import { MessageModel } from "./src/models/messageModel";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 
 const app = express();
 const httpServer = createServer(app);
@@ -32,14 +32,11 @@ const __dirname = path.dirname(__filename);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Routes
 app.use("/api/users", userRoutes);
 app.use("/api/rooms", roomRoutes);
 
-// เชื่อมต่อ MongoDB
 connectDB();
 
-// Socket.IO
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
@@ -49,9 +46,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("message", ({ roomId, message }) => {
-    // บันทึกข้อความลงฐานข้อมูล
     saveMessage(roomId, message);
-    // ส่งข้อความไปยังทุกคนในห้อง
     io.to(roomId).emit("newMessage", message);
   });
 
